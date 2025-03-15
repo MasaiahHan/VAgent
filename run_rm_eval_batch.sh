@@ -2,7 +2,7 @@
 datasets=(RM-Bench/total_dataset.chat_normal_converted.json RM-Bench/total_dataset.chat_hard_converted.json JudgeBench/judgebench-knowledge.json IFBench/data.converted.json)
 output_dir_prefixes=(rmbench-chat-normal rmbench-chat-hard judgebench-knowledge ifbench)
 
-model=/mnt/dolphinfs/ssd_pool/docker/user/hadoop-mtcv/tianyanghan/models/huggingface.co/RLHFlow/ArmoRM-Llama3-8B-v0.1
+model=/huggingface.co/RLHFlow/ArmoRM-Llama3-8B-v0.1
 # planner=gpt-4o-mini-2024-07-18
 planner=gpt-4o-mini
 
