@@ -9,8 +9,8 @@ planner=gpt-4o-mini
 judger_type=weighted_sum
 
 # if use openai model, please set the enriron veriable
-export OPENAI_BASE_URL="https://aigc.sankuai.com/v1/openai/native"
-export OPENAI_API_KEY="1722579627421638682"
+export OPENAI_BASE_URL=""
+export OPENAI_API_KEY=""
 
 
 # loop datasets和output_dir_prefixes
