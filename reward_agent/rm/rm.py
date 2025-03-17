@@ -2,6 +2,11 @@ from rewardbench.generative import run_judge_pair, process_judgement
 import torch
 
 
+def dummy_get_reward(instruction, response_chosen, response_rejected, **kwargs):
+    dummy_output = rm.forward()
+    return dummy_output
+
+
 def get_reward(rm, rm_type, tokenizer, question, text_chosen, text_rejected, text_pair, **kwargs):
     winner = "tie"
     if rm_type == "generative":
