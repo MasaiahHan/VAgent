@@ -9,7 +9,7 @@ import logging
 import random
 from collections import Counter
 from itertools import combinations
-
+from difference_model import DifferenceModel
 
 
 class RewardAgent:
@@ -24,16 +24,21 @@ class RewardAgent:
         self.tool_call_count = Counter()
 
 
-    def dummy_judge_different_types(self, instruction, response_chosen, response_rejected, **kwargs):
-        # first plan
-        dummy_plan_result = self.planner.plan(instruction)
+    def dummy_judge_different_types(self, image, instruction, response_chosen, response_rejected, **kwargs):
 
-        # tools
-        # tools.forward()
+        # difference propose
+        differences = difference_model.propose_diff(response_chosen, response_rejected)
 
-        # reward model
-        dummy_result = rm.dummy_get_reward(instruction, response_chosen, response_rejected, **kwargs)
+        dummy_result = []
 
+        # first plan, tool_selected
+        for difference in differences:
+            dummy_plan_result = self.planner.plan(instruction, difference)
+
+            # using tools
+            for tool in dummy_plan_result['tools']:
+                tool_result = self.tools[tool].forward(image, dummy_plan_result['inputs_text'])
+                dummy_result.append(tool_result)
         #judge winnder
         dummy_judge_res, scores = self.judger.dummy_judge(instruction, dummy_result)
 

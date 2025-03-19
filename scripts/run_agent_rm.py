@@ -41,7 +41,6 @@ from rewardbench.constants import EXAMPLE_COUNTS, SUBSET_MAPPING
 from rewardbench.utils import calculate_scores_per_section
 from reward_agent.agent import RewardAgent
 from reward_agent.planner import Planner
-from reward_agent.difference_model import DifferenceModel
 from reward_agent.build_model import APIModel, LocalAPIModel
 from reward_agent.judger import Judger
 from datasets import load_dataset
@@ -144,14 +143,8 @@ def main():
     # prepare for inference
     reward_pipe = accelerator.prepare(reward_pipe)
 
-    #inference using rewardmodel (gpt4 eg.)
-    # using transformers.forward (transformers' builted in)
-    results_rej = reward_model(response_chosen, **reward_pipeline_kwargs)
-    results_cho = reward_model(response_rejected, **reward_pipeline_kwargs)
-
     #inference using agent tools
-    differences = difference_model.propose_diff(response_chosen, response_rejected)
-    dummy_judge_res, scores = reward_agent.dummy_judge_different_types(instruction, answers)
+    dummy_judge_res, scores = reward_agent.dummy_judge_different_types(instruction, response_chosen, response_rejected)
 
             
 

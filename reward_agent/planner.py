@@ -1,18 +1,4 @@
 
-tools_desps = [
-    {
-        "name": "constraint check",
-        "desp": "A 'constraint check' is required if the instruction contains any additional constraints or requirements on the output, such as length, keywords, format, number of sections, frequency, order, etc.",
-        "identifier": "[[A]]"
-    },
-    {
-        "name": "factuality check",
-        "desp": "A 'factuality check' is required if the generated response to the instruction potentially contains claims about factual information or world knowledge.",
-        "identifier": "[[B]]"
-    }
-]
-
-
 class Planner:
     def __init__(self, model):
         """
@@ -24,7 +10,7 @@ class Planner:
         self.model = model
 
     
-    def plan(self, instruction):
+    def plan(self, instruction, difference):
         """
         Determine whether the given instruction and response require a constraint check or a factuality check.
 
@@ -36,16 +22,14 @@ class Planner:
             dict: A dictionary with keys 'constraint_check' and 'factuality_check', each mapping to a boolean.
         """
         plan_system_prompt = f"""
-        Given the following instruction, determine whether the following check in needed.
+        select which tool to use for verifying the differences. The descriptions of the tools have to be fed into the selector
 
         [Instruction]
         {instruction}
 
         [Checks]
-        {tools_desps}
+        {difference}
 
-        If the instruction requires some checks, please output the corresponding identifiers (such as [[A]], [[B]]).
-        Please do not output other identifiers if the corresponding checkers not needed.
         """
         messages = [
             {"role": "user", "content": plan_system_prompt}

@@ -33,7 +33,7 @@ class DifferenceModel:
             response2 (str): The generated response.
 
         Returns:
-            
+            List[String]
         """
         system_prompt = f"""
         {template}
@@ -51,5 +51,5 @@ class DifferenceModel:
 
         # Use the model to generate a decision
         dummy_output = self.model.generate_chat(messages)
-
+        difference_list = eval(dummy_output)
         return dummy_output
