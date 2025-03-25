@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import argparse
-import logging
 import os
 import sys
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -21,42 +20,19 @@ if project_root not in sys.path:
     sys.path.append(project_root)
 
 import numpy as np
-import torch
+# import torch
 import transformers
-from accelerate import Accelerator
-from accelerate.logging import get_logger
-from fastchat.conversation import get_conv_template
+
 from tqdm import tqdm
 import random
 from transformers import AutoTokenizer, pipeline
+from reward_agent.tools import ObjectDetect, TextExtractor, AttributeChecker
 
-from rewardbench import (
-    REWARD_MODEL_CONFIG,
-    check_tokenizer_chat_template,
-    load_eval_dataset,
-    save_to_hub,
-    torch_dtype_mapping,
-)
-from rewardbench.constants import EXAMPLE_COUNTS, SUBSET_MAPPING
-from rewardbench.utils import calculate_scores_per_section
 from reward_agent.agent import RewardAgent
 from reward_agent.planner import Planner
-from reward_agent.build_model import APIModel, LocalAPIModel
+from reward_agent.build_model import APIModel
 from reward_agent.judger import Judger
-from datasets import load_dataset
-
-# Enable TensorFloat32 (TF32) tensor cores on Ampere GPUs for matrix multiplications (faster than FP32)
-torch.backends.cuda.matmul.allow_tf32 = True
-torch.backends.cudnn.allow_tf32 = True
-
-# get token from HF_TOKEN env variable, but if it doesn't exist pass none
-HF_TOKEN = os.getenv("HF_TOKEN", None)
-# this is necessary to automatically log in when running this script in docker/batch beaker jobs
-if HF_TOKEN is not None:
-    from huggingface_hub._login import _login
-
-    _login(token=HF_TOKEN, add_to_git_credential=False)
-
+from reward_agent.difference_model import DifferenceModel
 import torch
 import random
 import numpy as np
@@ -85,66 +61,62 @@ def get_args():
 
 
 def main():
-    args = get_args()
-    set_seed(args.seed)
+    # args = get_args()
+    # set_seed(args.seed)
     ###############
     # Setup logging
     ###############
-    accelerator = Accelerator()
 
     # load chat template
-    chat_template = args.chat_template
-    conv = get_conv_template(chat_template)
+    image = '/mnt/dolphinfs/ssd_pool/docker/user/hadoop-mtcv/tianyanghan/code/regional_prompt_flux/Regional-Prompting-FLUX/output.jpg'
+    query = 'hello'
+    response_chosen, response_rejected = '1', '1'
 
-
-    # if not datatype in config (default), check args
-    if torch_dtype is None:
-        # if datatype is bfloat16, then manually turn off quantizaiton (done with bitsandbytes)
-        if args.torch_dtype == torch.bfloat16:
-            quantized = False
-            logger.info("Disabling quantization for bfloat16 datatype")
-        torch_dtype = args.torch_dtype
+    # # if not datatype in config (default), check args
+    # if torch_dtype is None:
+    #     # if datatype is bfloat16, then manually turn off quantizaiton (done with bitsandbytes)
+    #     if args.torch_dtype == torch.bfloat16:
+    #         quantized = False
+    #         logger.info("Disabling quantization for bfloat16 datatype")
+    #     torch_dtype = args.torch_dtype
 
 
 
     ############################
     # Load reward model pipeline
     ############################
-    BATCH_SIZE = args.batch_size
-    reward_model = load_reward_model(model, config)
-    # reward_pipe = pipeline_builder(
-    #     "text-classification",
-    #     model=model,
-    #     tokenizer=tokenizer,
-    # )
 
+    model_name = 'gpt4o-mini'
+    url = "https://aigc.sankuai.com/v1/openai/native"
+    key = '1722579627421638682'
     # load planner GPT
-    TOKEN = os.environ["OPENAI_API_KEY"]
-    base_url = os.environ["OPENAI_BASE_URL"]
-    planner_model =  APIModel(base_url, llm_backbone, TOKEN)
-    planner = Planner(planner_model)
+    planner =  Planner(model_name, url, key)
+
+    # load difference model
+    difference_model = DifferenceModel(model_name, url, key)
     
     # load judger
-    judger_model = APIModel(base_url, llm_backbone, TOKEN)
-    judger = Judger(judger_model)
+    judger = Judger(model_name, url, key)
 
     # load tools
-    tools = {}
+    attribute_checker = AttributeChecker(model_name, url, key)
+    text_extractor = TextExtractor()
+    object_detector = ObjectDetect(1)
+    tools = {
+        'attribute_checker':attribute_checker ,
+        'text_extractor': text_extractor, 
+        'object_detector': object_detector
+    }
 
     # load agent, combine all
-    reward_agent = RewardAgent(planner, judger, reward_model, tools)
-
-    # load difference proposal
-    difference_model = DifferenceModel(diff_model)
+    reward_agent = RewardAgent(difference_model, planner, judger, tools)    
 
     ############################
     # Run inference 
     ############################
-    # prepare for inference
-    reward_pipe = accelerator.prepare(reward_pipe)
-
     #inference using agent tools
-    dummy_judge_res, scores = reward_agent.dummy_judge_different_types(instruction, response_chosen, response_rejected)
+    dummy_judge_res = reward_agent.dummy_judge_different_types(image, query, response_chosen, response_rejected)
+    print(f'The winner is {dummy_judge_res}')
 
             
 

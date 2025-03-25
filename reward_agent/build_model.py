@@ -1,50 +1,32 @@
-from openai import OpenAI
+import openai
 import requests
+import base64
 
 class APIModel:
-    def __init__(self, base_url, model_name, api_key="EMPTY"):
-        self.client = OpenAI(
-            api_key=api_key,
-            base_url=base_url,
-        )
+    def __init__(self, model_name, base_url, api_key):
+        openai.api_key = api_key
+        openai.api_base = base_url
         self.model_name = model_name
-    
-    def search(self, query, max_tokens=512):
-        return self.generate(query, max_tokens=max_tokens)
 
-    def generate(self, query, max_tokens=1024, temperature=0.0):
+    def encode_image(self, image_path):
+        with open(image_path, "rb") as image_file:
+            return base64.b64encode(image_file.read()).decode("utf-8")
+
+
+
+    def generate(self,  message_template, max_tokens=1024, temperature=0.0):
         try:
-            chat_completion = self.client.chat.completions.create(
-                messages=[
-                    {
-                        "role": "user",
-                        "content": query
-                    }
-                ],
-                model=self.model_name,
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
+            chat_completion = openai.ChatCompletion.create(
+                            model="gpt-4o-mini",
+                            messages=message_template
+                        )
             response = chat_completion.choices[0].message.content
         except Exception as e:
             print(e)
             response = "NA"
         return response
 
-    def generate_chat(self, messages, max_tokens=1024, temperature=0.0):
-        try:
-            chat_completion = self.client.chat.completions.create(
-                messages=messages,
-                model=self.model_name,
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
-            response = chat_completion.choices[0].message.content
-            return response
-        except Exception as e:
-            print(e)
-            response = "NA"
-        return response
+
     
     def safety_check(self, query):
         try:
@@ -60,42 +42,7 @@ class APIModel:
         return response
 
 
-class LocalAPIModel:
-    def __init__(self, base_url, model_name, api_key="EMPTY"):
-        self.base_url = base_url
-        self.model_name = model_name
-    
-    def search(self, query, max_tokens=512):
-        return self.generate(query, max_tokens=max_tokens)
 
-    def generate(self, query, max_tokens=1024, temperature=0.0):
-        return self.generate_chat(
-            [{"role": "user", "content": query}],
-            max_tokens=max_tokens,
-            temperature=temperature
-        )
 
-    def generate_chat(self, messages, max_tokens=1024, temperature=0.0):
-        request_data = {
-            "model": self.model_name,
-            "messages": messages,
-            "max_tokens": 1024,
-            "temperature": 0.0
-        }
-        response = requests.post(
-            self.base_url,
-            json=request_data,
-            headers={"Content-Type": "application/json"},
-            timeout=900 
-        )
-        if response.status_code == 200:
-            resp_json = response.json()
-            content = resp_json['choices'][0]['message']['content'].strip()
-            return content
-        else:
-            print(
-                f"Failed to fetch response: {response.status_code}, {response.text}"
-            )
-            return None
-    
-     
+
+

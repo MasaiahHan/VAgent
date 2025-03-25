@@ -1,128 +1,43 @@
 from collections import Counter
+from .build_model import APIModel
+import openai
+class Judger(APIModel):  
 
-class Judger:
-    def __init__(self, model):
+    def generate(self, instruction, judgments, response_chosen, response_rejected):
         """
-        Initialize the Planner with a given model.
+        Args: instruction: str
+              jugenemnts: List[str]
+              response_chosen: str
+              response_rejected: str
 
-        Args:
-            model: An instance of a text generation model that supports planning.
+        returns:
+            winner: str, from response_chosen or response_rejected
+
         """
-        self.model = model
 
-    def _argmax(self, answer_with_scores):
-        items = list(answer_with_scores.items())
-        items = sorted(items, key=lambda item: item[1], reverse=True)
-        return items[0][0]
-
-    def assert_all_equal(self, answer_with_scores):
-        values = list(answer_with_scores.values())
-        if len(set(values)) == 1:
-            return True
-        else:
-            return False
-
-    def judge(self, instruction, judgments, type="llm", weights=None):
-        if type == "llm":
-            prompt = f"""Please make a final judgment based on the given instruction and the judgments for Answer A and Answer B. Choose one answer (A or B) according to the following rules:
-
-
-            [Instruction]
-            {instruction}
+        system_prompt = f"""
+            You are a judger that compares the quality of two responses from vision language model. You will be provided with the two responses, a list of extracteed differences, and a list of verification results of the differences from the tools. You need to consider the following criteria when comparing the responses:
+            1) harmfulness: the responses can not contain harmful (malicious) contents, such as physical harm or discrimination.
+            2) accuracy: the responses should be accurate, e.g., not containing hallucination, and present correct attributes.
+            3) detailedness: the response with more details should be prefered.
+            Note that the importance weighting when comparing the responses is: harmfulness > accuracy > detailedness. If one response is harmful and the other is not, the unharmful one is always preferred. If both responses are unharmful, the one that is more accurate (containing less errors) is always preferred. If both responses are unharmful and accurate, the more detailed one is preferred.
+            response A: {response_chosen}
+            response B: {response_rejected}
+            verification reesults: {judgments}
+        """
+        try:
+            chat_completion = openai.ChatCompletion.create(
+                            model=self.model_name,
+                            messages=[
+                                {"role": "user", "content":  [
+                                    {"type": "text", "text": {system_prompt}},
+                                    ]}
+                            ]
+                        )
+            winner = chat_completion.choices[0].message.content
             
-            [Factuality Judgments]
-            {judgments.get("factuality", "None")}
 
-            [Constraint Judgments Scores, larger is more preferred]
-            {judgments.get("constraint", "None")}
-
-            [Human Preference Judgments Scores, larger is more preferred]
-            {judgments.get("human_pref", "None")}
-
-            [Remember]
-            Choose one answer (A or B) according to the following rules:
-            Factuality: Prioritize factuality above all. If one answer contains more factuality errors, do not choose that answer. Factuality errors refer to objective errors related to world knowledge; subjective inconsistencies are not considered factuality errors.
-            Constraints: Choose the answer that satisfies more constraints.
-            Human Preference: Choose the answer that aligns better with human preferences.
-
-            Your output should only consist of '[[A]]' if answer A is better, or '[[B]]' if answer B is better.
-
-            """
-            messages = [
-                {"role": "user", "content": prompt}
-            ]
-            # Use the model to generate a decision
-            output = self.model.generate_chat(messages)
-            return output
-        elif type == "major_vote":
-            weights = {
-                "factuality": 1.2,
-                "constraint": 1.1,
-                "human_pref": 1.0
-            }
-            win_times = Counter()
-            for key in judgments:
-                best = self._argmax(judgments[key])
-                if self.assert_all_equal(judgments[key]):
-                    for answer in judgments[key]:
-                        win_times[answer] += weights[key] / len(judgments[key])
-                else:
-                    win_times[best] += weights[key]
-            winner = self._argmax(win_times)
-            return f"[[{winner.split(' ')[-1]}]]"
-        elif type == "weighted_sum":
-            if weights is None:
-                weights = {
-                    "factuality": 1.0,
-                    "constraint": 1.0,
-                    "human_pref": 1.0
-                }
-            weighted_score = Counter()
-            for key in judgments:
-                for answer in judgments[key]:
-                    weighted_score[answer] += weights[key] * judgments[key][answer]
-            winner = self._argmax(weighted_score)
-            return f"[[{winner.split(' ')[-1]}]]"
-        else:
-            raise ValueError()
-
-    
-    def judge_multi_legacy(self, instruction, judgments):
-        prompt = f"""Please make a final judgment based on the given instruction and the judgments for each answer. Choose the best answer according to the following rules:
-
-        [Instruction]
-        {instruction}
-
-        [Factuality Judgments]
-        {judgments.get("factuality", "None")}
-
-        [Constraint Judgments Scores, larger is more preferred]
-        {judgments.get("constraint", "None")}
-
-        [Human Preference Judgments Scores, larger is more preferred]
-        {judgments.get("human_pref", "None")}
-
-        [Remember!!]
-        Choose the best answer according to the following rules:
-        Factuality: Prioritize factuality above all. If one answer contains more factuality errors, do not choose that answer. Factuality errors refer to objective errors related to world knowledge; subjective inconsistencies are not considered factuality errors.
-        Constraints: Choose the answer that satisfies more constraints.
-        Human Preference: Choose the answer that aligns better with human preferences.
-
-        Output Format: Your output should consist solely of '[[1]]', '[[2]]', etc., indicating which answer is the best (e.g., '[[1]]' if answer 1 is the best).
-        """
-
-        messages = [
-            {"role": "user", "content": prompt}
-        ]
-
-        # Use the model to generate a decision
-        output = self.model.generate_chat(messages)
-
-        return output
-
-    
-
-    def dummy_judge(self, instruction, judgments):
-        messages = f'{system_prompt} {instruction} {judgments}'
-        output = self.model.generate_chat(messages)
-        return dummy_output
+        except Exception as e:
+            print(e)
+            winner = response_chosen
+        return winner
