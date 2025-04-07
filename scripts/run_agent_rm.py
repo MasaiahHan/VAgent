@@ -36,6 +36,8 @@ from reward_agent.difference_model import DifferenceModel
 import torch
 import random
 import numpy as np
+from datasets import load_dataset
+
 
 def set_seed(seed: int):
     """
@@ -49,37 +51,17 @@ def set_seed(seed: int):
     torch.backends.cudnn.benchmark = False  # 禁用 cudnn 的自适应算法
 
 
-def get_args():
-    """
-    Parse arguments strings model and chat_template
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, required=True, help="path to model")
-    args = parser.parse_args()
-    args.torch_dtype = torch_dtype_mapping(args.torch_dtype)
-    return args
-
 
 def main():
-    # args = get_args()
-    # set_seed(args.seed)
-    ###############
-    # Setup logging
-    ###############
 
     # load chat template
     image = '/mnt/dolphinfs/ssd_pool/docker/user/hadoop-mtcv/tianyanghan/code/regional_prompt_flux/Regional-Prompting-FLUX/output.jpg'
     query = 'hello'
     response_chosen, response_rejected = '1', '1'
 
-    # # if not datatype in config (default), check args
-    # if torch_dtype is None:
-    #     # if datatype is bfloat16, then manually turn off quantizaiton (done with bitsandbytes)
-    #     if args.torch_dtype == torch.bfloat16:
-    #         quantized = False
-    #         logger.info("Disabling quantization for bfloat16 datatype")
-    #     torch_dtype = args.torch_dtype
 
+    # Login using e.g. `huggingface-cli login` to access this dataset
+    ds = load_dataset("MMInstruction/VL-RewardBench")
 
 
     ############################
@@ -101,7 +83,7 @@ def main():
     # load tools
     attribute_checker = AttributeChecker(model_name, url, key)
     text_extractor = TextExtractor()
-    object_detector = ObjectDetect(1)
+    object_detector = ObjectDetect(token='c9fff8febc23e864aa7656553f182ebe')
     tools = {
         'attribute_checker':attribute_checker ,
         'text_extractor': text_extractor, 

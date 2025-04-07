@@ -21,9 +21,9 @@ class RewardAgent:
             dummy_plan_result = self.planner.generate(image, instruction, response_chosen, response_rejected, difference)
 
             # using tools
-            for tool in dummy_plan_result['tools']:
-                tool_result = self.tools[tool].generate(image, dummy_plan_result['inputs_text'])
-                dummy_result.append({'input_question':dummy_plan_result['inputs_text'], 'answer': tool_result})
+            for tool, input_text in dummy_plan_result['tools'], dummy_plan_result['inputs_text']:
+                tool_result = self.tools[tool].generate(image, input_text)
+                dummy_result.append({'input_question':dummy_plan_result['inputs_text'], 'answer': tool_result, 'response_chosen': response_chosen, 'response_rejected':response_rejected})
         #judge winnder
         winner = self.judger.generate(instruction, dummy_result,  response_chosen, response_rejected)
 

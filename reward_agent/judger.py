@@ -25,8 +25,8 @@ class Judger(APIModel):
             response B: {response_rejected}
             verification reesults: {judgments}
         """
-        try:
-            chat_completion = openai.ChatCompletion.create(
+        # try:
+        chat_completion = openai.ChatCompletion.create(
                             model=self.model_name,
                             messages=[
                                 {"role": "user", "content":  [
@@ -34,10 +34,10 @@ class Judger(APIModel):
                                     ]}
                             ]
                         )
-            winner = chat_completion.choices[0].message.content
+        winner = chat_completion.choices[0].message.content
             
 
-        except Exception as e:
-            print(e)
-            winner = response_chosen
+        # except Exception as e:
+        #     print(e)
+        #     winner = response_chosen
         return winner

@@ -53,7 +53,7 @@ class ObjectDetect:
         result = self.postprocess(result, task, return_mask)
 
         # return number of object
-        return result['labels']
+        return result#['labels']
 
 
     def postprocess(self, result, task, return_mask):

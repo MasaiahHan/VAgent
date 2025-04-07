@@ -6,7 +6,11 @@ class Planner(APIModel):
         Determine whether the given instruction and response require a constraint check or a factuality check.
 
         Returns:
-            dict
+                 dict = [
+                 {'tool': 'attribute_checker', 'input-text':'test' },
+                 {'tool': 'text_extractor', 'input-text':'test' },
+                 {'tool': 'object_detector', 'input-text':'test' },
+           ]
         """
 
         tools_description = """
@@ -45,13 +49,13 @@ class Planner(APIModel):
         You are responsible for selecting the appropriate tool to verify the property of an image. 
         You will be given the property to verify, e.g., existence, color, count , etc.
         You will be provided with a set of tools with their descriptions. You need to select the appropriate tool, and also determine the values of the input parameters to the tool.
-        tools: {tool_description}
+        tools: {tools_description}
         property: {difference}
-        Answer following the format: [{{"tool": "tool_name", "inputs":the values of the input parameters to the tool }},{{}}]
+        Answer following the format: [{{"tool": "tool_name", "inputs_text": the values of the input parameters to the tool }},{{}}]
         """
 
-        try:
-            chat_completion = openai.ChatCompletion.create(
+        # try:
+        chat_completion = openai.ChatCompletion.create(
                             model=self.model_name,
                             messages=[
                                 {"role": "user", "content":  [
@@ -59,20 +63,14 @@ class Planner(APIModel):
                                     ]}
                             ]
                         )
-            dummy_output = chat_completion.choices[0].message.content
+        dummy_output = chat_completion.choices[0].message.content
 
-            # need modified, convert dummy_output to the following List[dict] format 
+        # need modified, convert dummy_output to the following List[dict] format 
+        dummy_output = eval(dummy_output)
 
-            #
-            dummy_output = [
-                {'tool': 'attribute_checker', 'input-text':'test' },
-                {'tool': 'text_extractor', 'input-text':'test' },
-                {'tool': 'object_detector', 'input-text':'test' },
-            ]
-
-        except Exception as e:
-            print(e)
-            dummy_output = []
+        # except Exception as e:
+        #     print(e)
+        #     dummy_output = []
         return dummy_output
 
 
